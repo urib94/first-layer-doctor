@@ -1004,18 +1004,23 @@
   // Stubbed analytics function. Replace body with a real analytics call
   // when ready (e.g. GoatCounter, Plausible, etc.). No network calls today.
   function trackEvent(eventName){
-    // Cloudflare Web Analytics has no custom-event API, so intent events are
-    // counted as virtual SPA pageviews: the CF beacon auto-tracks History API
-    // pushState navigations. We push a virtual sub-path (e.g. .../event/pro_intent),
-    // let the beacon record it, then restore the real URL. Works offline as a no-op.
+    // Cloudflare Web Analytics has no custom-event API, and its beacon ignores
+    // History-API pushState in practice (verified live 2026-07-14: load:"single",
+    // no rum POST on pushState). So intent events are counted as REAL pageviews:
+    // a tiny static event page (event/<name>.html, carrying its own CF beacon)
+    // is loaded in a hidden iframe. Works offline / file:// as a no-op.
     try {
-      var realPath = window.location.pathname + window.location.search + window.location.hash;
-      var base = window.location.pathname.replace(/\/$/, "");
-      history.pushState({}, "", base + "/event/" + eventName);
-      setTimeout(function(){
-        history.replaceState({}, "", realPath);
-      }, 250);
-    } catch (e){ /* no-op (file:// or restricted context) */ }
+      var allowed = { pro_intent: 1 };
+      if (allowed[eventName] && /^https?:$/.test(window.location.protocol)) {
+        var f = document.createElement("iframe");
+        f.src = "event/" + eventName + ".html";
+        f.style.cssText = "position:absolute;width:1px;height:1px;left:-9999px;visibility:hidden;border:0;";
+        f.setAttribute("aria-hidden", "true");
+        f.setAttribute("tabindex", "-1");
+        document.body.appendChild(f);
+        setTimeout(function(){ try { document.body.removeChild(f); } catch(e){ /* no-op */ } }, 10000);
+      }
+    } catch (e){ /* no-op (restricted context) */ }
     try {
       console.log("[trackEvent]", eventName);
     } catch (e){ /* no-op */ }
