@@ -513,8 +513,7 @@
     </div>
 
     <div class="support-row">
-      <!-- TODO: replace with real Ko-fi URL -->
-      <a class="btn btn-kofi" href="#KOFI_URL_PLACEHOLDER" target="_blank" rel="noopener">☕ This saved my print — tip the toolmaker</a>
+      <a class="btn btn-kofi" href="https://ko-fi.com/uribe" target="_blank" rel="noopener">☕ This saved my print — tip the toolmaker</a>
       <button class="btn btn-pro" id="proIntentBtn" type="button">Get the Pro Calibration Kit — printable test cards + per-printer cheat sheets ($9)</button>
     </div>
   </div>
@@ -1005,21 +1004,18 @@
   // Stubbed analytics function. Replace body with a real analytics call
   // when ready (e.g. GoatCounter, Plausible, etc.). No network calls today.
   function trackEvent(eventName){
-    // TODO: wire up real analytics. Example GoatCounter snippet (disabled):
-    //
-    // if (window.goatcounter && typeof window.goatcounter.count === "function") {
-    //   window.goatcounter.count({
-    //     path: eventName,
-    //     title: eventName,
-    //     event: true
-    //   });
-    // }
-    //
-    // GoatCounter site script would normally be loaded like:
-    // <script data-goatcounter="https://YOUR-SITE-CODE.goatcounter.com/count"
-    //         async src="//gc.zgo.at/count.js"><\/script>
-    //
-    // For now this is a local no-op stub so the tool works fully offline.
+    // Cloudflare Web Analytics has no custom-event API, so intent events are
+    // counted as virtual SPA pageviews: the CF beacon auto-tracks History API
+    // pushState navigations. We push a virtual sub-path (e.g. .../event/pro_intent),
+    // let the beacon record it, then restore the real URL. Works offline as a no-op.
+    try {
+      var realPath = window.location.pathname + window.location.search + window.location.hash;
+      var base = window.location.pathname.replace(/\/$/, "");
+      history.pushState({}, "", base + "/event/" + eventName);
+      setTimeout(function(){
+        history.replaceState({}, "", realPath);
+      }, 250);
+    } catch (e){ /* no-op (file:// or restricted context) */ }
     try {
       console.log("[trackEvent]", eventName);
     } catch (e){ /* no-op */ }
@@ -1075,5 +1071,6 @@
 
 })();
 </script>
+<!-- Cloudflare Web Analytics --><script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "23fa546dc251459d9ed16e15f63a56c3"}'></script><!-- End Cloudflare Web Analytics -->
 </body>
 </html>
